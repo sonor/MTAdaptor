@@ -16,7 +16,10 @@ class Server
 {
     public static String responseData = String.Empty;
     TcpListener server = null;
-    
+    bool recordMode = false;
+
+
+
     public Server(string ip, int port)
     {
         IPAddress localAddr = IPAddress.Parse(ip);
@@ -30,35 +33,34 @@ class Server
         {
             while (true)
             {
-                Console.WriteLine("Waiting for a connection...");
+             
                 TcpClient client = server.AcceptTcpClient();
                
                 var cidEndppoint = (IPEndPoint)client.Client.LocalEndPoint;
+               
 
 
                 if (cidEndppoint.Port == 8080) 
                 {
-                    Console.WriteLine("8080 Connected!");
+                    Console.WriteLine($"{DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss")} => TCP Received Data");
 
                     NetworkStream stream = client.GetStream();
 
                     Byte[] data = null;
                     data = new Byte[256];
-                    
-                    Int32 bytes = stream.Read(data, 0, data.Length); //(**This receives the data using the byte method**)
-                    responseData = System.Text.Encoding.ASCII.GetString(data, 0, bytes); //(**This converts it to string**)
-                    Console.WriteLine("TCP: incoming request received");
 
-                    Thread t = new Thread(new ParameterizedThreadStart(HandleDeivce));
+                    Int32 bytes = stream.Read(data, 0, data.Length);
+                    responseData = System.Text.Encoding.ASCII.GetString(data, 0, bytes);
+
+                    Thread t = new Thread(new ParameterizedThreadStart(TCPForwarding));
                     t.Start(client);
                    
                 }
                 else if (cidEndppoint.Port == 8081)
                 {
-                    Console.WriteLine("8081 Connected!");
-                    // Создаем поток
-                    Thread Thread = new Thread(new ParameterizedThreadStart(ClientHandler));
-                    // И запускаем этот поток, передавая ему принятого клиента
+                    Console.WriteLine($"{DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss")} => HTTP Incoming Request");
+            
+                    Thread Thread = new Thread(new ParameterizedThreadStart(HTTPHandler));
                     Thread.Start(client);
                 }
 
@@ -71,68 +73,60 @@ class Server
             server.Stop();
         }
     }
-    public void HandleDeivce(Object obj)
+    public void TCPForwarding(Object obj)
     {
-      
         string url = "http://localhost:9001";
         string request = responseData;
-        string id = MTAdaptor.Hashing.SHA3_512(request);
+        string id = MTAdaptor.Hashing.SHA3_512(request); //Get Hash from incoming TCP Data
         string buildedUrl = url + "/?" + "id=" + id;
-
-        var values = new Dictionary<string, string>
-            {
-
-                { "body", request }
-            };
-        var content = new FormUrlEncodedContent(values);
 
         HttpClient client = new HttpClient();
 
+            var values = new Dictionary<string, string>
+            {
+                { "body", request }
+            };
 
-        client.PostAsync(buildedUrl, content);
+            var content = new FormUrlEncodedContent(values);
 
-    //var responseString = response.Content.ReadAsStringAsync();
+            client.PostAsync(buildedUrl, content);
+            Console.WriteLine($"{DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss")} TCP Forwarding => {url}");
+            Console.WriteLine($"Data Hash: {id}");
 
-
-
-    /*
-    TcpClient client = (TcpClient)obj;
-    var stream = client.GetStream();
-    string imei = String.Empty;
-    string data = null;
-    Byte[] bytes = new Byte[256];
-    int i;
-    try
-    {
-        while ((i = stream.Read(bytes, 0, bytes.Length)) != 0)
+        if (!recordMode)
         {
-            string hex = BitConverter.ToString(bytes);
-            data = Encoding.ASCII.GetString(bytes, 0, i);
-            Console.WriteLine("{1}: Received: {0}", data, Thread.CurrentThread.ManagedThreadId);
-            string str = "Hey Device!";
-            Byte[] reply = System.Text.Encoding.ASCII.GetBytes(str);
-            stream.Write(reply, 0, reply.Length);
-            Console.WriteLine("{1}: Sent: {0}", str, Thread.CurrentThread.ManagedThreadId);
+         GetProductAsync(buildedUrl, content);
+         Console.WriteLine($"{DateTime.Now.ToString($"MM/dd/yyyy HH:mm:ss")} => Incoming HTTP from: {buildedUrl}");
+
         }
-    }
-    catch (Exception e)
-    {
-        Console.WriteLine("Exception: {0}", e.ToString());
-        client.Close();
-    }
-    */
-}
 
-    static void ClientHandler(Object StateInfo)
-    {
 
-        // Просто создаем новый экземпляр класса Client и передаем ему приведенный к классу TcpClient объект StateInfo
-        new Client((TcpClient)StateInfo);
-
-    }
-
-  
+           
+        
        
+    }
+    static async Task<string> GetProductAsync(string urlEndPoint, FormUrlEncodedContent content)
+    {
+        HttpClient client = new HttpClient();
+
+        string response = null;
+        HttpResponseMessage getResponse = await client.PostAsync(urlEndPoint, content);
+        if (getResponse.IsSuccessStatusCode)
+        {
+            response = await getResponse.Content.ReadAsStringAsync();
+            if (response == "")
+                Console.WriteLine("! ERROR: HTTP 404 Bad request !");
+
+        }
+        return response;
+    }
+
+
+    static void HTTPHandler(Object StateInfo)
+    {
+        new Client((TcpClient)StateInfo);
+    }
+    
 }
 
 
@@ -141,18 +135,14 @@ class Client
 
     private void SendResponseData(TcpClient Client, int Code, string data)
     {
-        // Получаем строку вида "200 OK"
-        // HttpStatusCode хранит в себе все статус-коды HTTP/1.1
         string CodeStr = Code.ToString() + " " + ((HttpStatusCode)Code).ToString();
-        // Код простой HTML-странички
         string Html = data;
-        // Необходимые заголовки: ответ сервера, тип и длина содержимого. После двух пустых строк - само содержимое
         string Str = "HTTP/1.1 " + CodeStr + "\nContent-type: text/html\nContent-Length:" + Html.Length.ToString() + "\n\n" + Html;
-        // Приведем строку к виду массива байт
         byte[] Buffer = Encoding.ASCII.GetBytes(Str);
-        // Отправим его клиенту
+      
         Client.GetStream().Write(Buffer, 0, Buffer.Length);
-        // Закроем соединение
+        Console.WriteLine($"{DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss")} HTTP Response Sent =>");
+        Console.WriteLine($"===============================================\n");
         Client.Close();
     }
 
@@ -179,7 +169,7 @@ class Client
     // Конструктор класса. Ему нужно передавать принятого клиента от TcpListener
     public Client(TcpClient Client)
     {
-        Console.WriteLine($"HTTP LISTENER STARTED ON:");
+     
         // Объявим строку, в которой будет хранится запрос клиента
         string Request = "";
         // Буфер для хранения принятых от клиента данных

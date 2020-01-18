@@ -10,23 +10,36 @@ namespace MTAdaptor
 
         static void Main(string[] args)
         {
-            Thread t = new Thread(delegate ()
+            string ipAddress = (IPAddress.Any).ToString();
+            int incomingPort = 8080;
+            int outcomingPort = 8081;
+            
+
+            Console.WriteLine("MTAdaptor Started...");
+            Console.WriteLine("====================");
+           
+
+            Thread incomingTcp = new Thread(delegate ()
             {
-                // replace the IP with your system IP Address...
-                Server myserver = new Server("127.0.0.1", 8080);
+                Server myserver = new Server(ipAddress, incomingPort);
             });
-            t.Start();
 
-            Console.WriteLine("Server Started...!");
+            incomingTcp.Start();
 
-            Thread b = new Thread(delegate ()
+
+            Console.WriteLine($"Incoming TCP running on {ipAddress}:{incomingPort}");
+
+            Thread outcomingTcp = new Thread(delegate ()
             {
-                // replace the IP with your system IP Address...
-                Server myserver = new Server("127.0.0.1", 8081);
+                Server myserver = new Server(ipAddress, outcomingPort);
             });
-            b.Start();
 
-            Console.WriteLine("Server Started...!");
+            outcomingTcp.Start();
+
+            Console.WriteLine($"Outcoming TCP running on {ipAddress}:{outcomingPort}");
+
+            Console.WriteLine("Waiting for connections...");
+
         }
 
 
