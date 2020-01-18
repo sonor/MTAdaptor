@@ -10,9 +10,13 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
+
+
 class Server
 {
+    public static String responseData = String.Empty;
     TcpListener server = null;
+    
     public Server(string ip, int port)
     {
         IPAddress localAddr = IPAddress.Parse(ip);
@@ -35,8 +39,19 @@ class Server
                 if (cidEndppoint.Port == 8080) 
                 {
                     Console.WriteLine("8080 Connected!");
+
+                    NetworkStream stream = client.GetStream();
+
+                    Byte[] data = null;
+                    data = new Byte[256];
+                    
+                    Int32 bytes = stream.Read(data, 0, data.Length); //(**This receives the data using the byte method**)
+                    responseData = System.Text.Encoding.ASCII.GetString(data, 0, bytes); //(**This converts it to string**)
+                    Console.WriteLine("TCP: incoming request received");
+
                     Thread t = new Thread(new ParameterizedThreadStart(HandleDeivce));
                     t.Start(client);
+                   
                 }
                 else if (cidEndppoint.Port == 8081)
                 {
@@ -58,8 +73,9 @@ class Server
     }
     public void HandleDeivce(Object obj)
     {
+      
         string url = "http://localhost:9001";
-        string request = "SKUNK WORKS IN DERIVCO WORLD!";
+        string request = responseData;
         string id = MTAdaptor.Hashing.SHA3_512(request);
         string buildedUrl = url + "/?" + "id=" + id;
 
@@ -123,6 +139,23 @@ class Server
 class Client
 {
 
+    private void SendResponseData(TcpClient Client, int Code, string data)
+    {
+        // Получаем строку вида "200 OK"
+        // HttpStatusCode хранит в себе все статус-коды HTTP/1.1
+        string CodeStr = Code.ToString() + " " + ((HttpStatusCode)Code).ToString();
+        // Код простой HTML-странички
+        string Html = data;
+        // Необходимые заголовки: ответ сервера, тип и длина содержимого. После двух пустых строк - само содержимое
+        string Str = "HTTP/1.1 " + CodeStr + "\nContent-type: text/html\nContent-Length:" + Html.Length.ToString() + "\n\n" + Html;
+        // Приведем строку к виду массива байт
+        byte[] Buffer = Encoding.ASCII.GetBytes(Str);
+        // Отправим его клиенту
+        Client.GetStream().Write(Buffer, 0, Buffer.Length);
+        // Закроем соединение
+        Client.Close();
+    }
+
     // Отправка страницы с ошибкой
     private void SendError(TcpClient Client, int Code)
     {
@@ -140,6 +173,8 @@ class Client
         // Закроем соединение
         Client.Close();
     }
+
+
 
     // Конструктор класса. Ему нужно передавать принятого клиента от TcpListener
     public Client(TcpClient Client)
@@ -203,7 +238,9 @@ class Client
         // Если в папке www не существует данного файла, посылаем ошибку 404
         if (!File.Exists(FilePath))
         {
-            SendError(Client, 404);
+            SendResponseData(Client, 200, Server.responseData);
+            //SendError(Client, 404);
+
             return;
         }
 

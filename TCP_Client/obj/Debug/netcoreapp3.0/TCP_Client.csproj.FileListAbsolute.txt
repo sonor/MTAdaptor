@@ -1,0 +1,11 @@
+C:\Users\Vladimir\source\repos\MTAdaptor\TCP_Client\bin\Debug\netcoreapp3.0\TCP_Client.exe
+C:\Users\Vladimir\source\repos\MTAdaptor\TCP_Client\bin\Debug\netcoreapp3.0\TCP_Client.deps.json
+C:\Users\Vladimir\source\repos\MTAdaptor\TCP_Client\bin\Debug\netcoreapp3.0\TCP_Client.runtimeconfig.json
+C:\Users\Vladimir\source\repos\MTAdaptor\TCP_Client\bin\Debug\netcoreapp3.0\TCP_Client.runtimeconfig.dev.json
+C:\Users\Vladimir\source\repos\MTAdaptor\TCP_Client\bin\Debug\netcoreapp3.0\TCP_Client.dll
+C:\Users\Vladimir\source\repos\MTAdaptor\TCP_Client\bin\Debug\netcoreapp3.0\TCP_Client.pdb
+C:\Users\Vladimir\source\repos\MTAdaptor\TCP_Client\obj\Debug\netcoreapp3.0\TCP_Client.csprojAssemblyReference.cache
+C:\Users\Vladimir\source\repos\MTAdaptor\TCP_Client\obj\Debug\netcoreapp3.0\TCP_Client.AssemblyInfoInputs.cache
+C:\Users\Vladimir\source\repos\MTAdaptor\TCP_Client\obj\Debug\netcoreapp3.0\TCP_Client.AssemblyInfo.cs
+C:\Users\Vladimir\source\repos\MTAdaptor\TCP_Client\obj\Debug\netcoreapp3.0\TCP_Client.dll
+C:\Users\Vladimir\source\repos\MTAdaptor\TCP_Client\obj\Debug\netcoreapp3.0\TCP_Client.pdb
