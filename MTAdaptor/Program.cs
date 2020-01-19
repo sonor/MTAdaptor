@@ -1,67 +1,86 @@
 ﻿using System;
 using System.Net;
-using System.Net.Sockets;
 using System.Threading;
 
 namespace MTAdaptor
 {
     class Program
     {
+        public static bool recordMode = true;
 
-        static void Main(string[] args)
+        static IPAddress ipAddress = IPAddress.Any; //default localhost ip
+        static int incomingPort = 8080;
+        static int outcomingPort = 8081;
+
+        [STAThread]
+        static void Main()
         {
-            string ipAddress = (IPAddress.Any).ToString();
-            int incomingPort = 8080;
-            int hostPort = 8079; // for playback messages
-            int outcomingPort = 8081;
-
-            if (Server.recordMode)
+            if (recordMode)
             {
                 Console.WriteLine("MTAdaptor Started in Record mode...");
                 Console.WriteLine("===================================\n");
 
-                Thread incomingTcp = new Thread(delegate ()
+                try
                 {
-                    Server myserver = new Server(ipAddress, incomingPort);
-                });
+                    //THREAD FOR INCOMING CONNECTIONS
+                    Thread incomingTcp = new Thread(delegate ()
+                    {
+                        ServerTCP myserver = new ServerTCP(ipAddress, incomingPort, recordMode);
+                    });
 
-                incomingTcp.Start();
-                Console.WriteLine($"Incoming TCP running on {ipAddress}:{incomingPort}");
+                    incomingTcp.Start();
+
+                    //THREAD FOR HTTP HOST CONNECTIONS
+                    Thread outcomingHTTP = new Thread(delegate ()
+                    {
+                        ServerHTTP myserver = new ServerHTTP(ipAddress, outcomingPort);
+                    });
+
+                    outcomingHTTP.Start();
+
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("! System error: Cannot start server threads !");
+                }
+
+              
+
+                while (true)
+                {
+
+                }
+
             }
-            else
+            else 
             {
                 Console.WriteLine("MTAdaptor Started in Playback mode...");
-                Console.WriteLine("=====================================\n");
+                Console.WriteLine("===================================\n");
 
-                Thread incomingTcp = new Thread(delegate ()
+                try
                 {
-                    Server myserver = new Server(ipAddress, incomingPort);
+                    //THREAD FOR INCOMING CONNECTIONS
+                    Thread incomingTcp = new Thread(delegate ()
+                {
+                    ServerTCP myserver = new ServerTCP(ipAddress, incomingPort, recordMode);
                 });
 
-                incomingTcp.Start();
-
-                Thread hostTCP = new Thread(delegate ()
+                    incomingTcp.Start();
+                }
+                catch (Exception e)
                 {
-                    Server myserver = new Server(ipAddress, hostPort);
-                });
-                hostTCP.Start();
+                    Console.WriteLine("! System error: Cannot start server threads !");
+                }
+                
 
-                Console.WriteLine($"Incoming TCP running on {ipAddress}:{incomingPort} | {hostPort}");
+                while (true)
+                {
+
+                }
+
 
             }
-            Thread outcomingTcp = new Thread(delegate ()
-            {
-                Server myserver = new Server(ipAddress, outcomingPort);
-            });
-
-            outcomingTcp.Start();
-
-            Console.WriteLine($"Outcoming TCP running on {ipAddress}:{outcomingPort}");
-
-            Console.WriteLine("Waiting for job...");
-
+           
         }
-
-
     }
 }

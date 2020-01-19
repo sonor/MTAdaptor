@@ -1,161 +1,68 @@
-﻿using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
-using System.Net.Http;
 using System.Net.Sockets;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
-using System.Threading.Tasks;
 
-
-
-class Server
+namespace MTAdaptor
 {
-    public static String responseData = String.Empty;
-    TcpListener server = null;
-    public static bool recordMode = false;
-    public static byte[] TCPResponse = null;
-
-
-
-    public Server(string ip, int port)
+    class ServerHTTP
     {
-        IPAddress localAddr = IPAddress.Parse(ip);
-        server = new TcpListener(localAddr, port);
-        server.Start();
-        StartListener();
-    }
-    public void StartListener()
-    {
-        try
+        TcpListener mTCPListener;
+        public static String responseData = String.Empty;
+
+        public ServerHTTP(IPAddress ipAddress, int incomingPort)
         {
-            while (true)
+            StartHTTPHost(ipAddress, incomingPort);
+
+        }
+
+        public async void StartHTTPHost(IPAddress ipAddress, int incomingPort)
+        {
+            mTCPListener = new TcpListener(ipAddress, incomingPort);
+            try 
             {
-             
-                TcpClient client = server.AcceptTcpClient();
-               
-                var cidEndppoint = (IPEndPoint)client.Client.LocalEndPoint;
-               
-
-
-                if (cidEndppoint.Port == 8080) 
+                mTCPListener.Start();
+                Console.WriteLine($"HTTP Host running on {ipAddress}:{incomingPort}");
+                Console.WriteLine("Waiting for job...");
+                while (true)
                 {
-                    Console.WriteLine($"{DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss")} => TCP Received Data");
+                    TcpClient client = await mTCPListener.AcceptTcpClientAsync();
 
-                    NetworkStream stream = client.GetStream();
+                    Console.WriteLine($"{DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss")} => Incoming HTTP Request");
 
-                    Byte[] data = null;
-                    data = new Byte[256];
-
-                    Int32 bytes = stream.Read(data, 0, data.Length);
-                    responseData = System.Text.Encoding.ASCII.GetString(data, 0, bytes);
-
-
-                    Thread t = new Thread(new ParameterizedThreadStart(HTTPForwarding));
-                    t.Start(client);
-
-
-                   
-
-
-
-
-
+                    HTTPClientHandler(client);
                 }
-                else if (cidEndppoint.Port == 8081)
-                {
-                    Console.WriteLine($"{DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss")} => HTTP Request");
-            
-                    Thread Thread = new Thread(new ParameterizedThreadStart(HTTPHandler));
-                    Thread.Start(client);
-                }
-                
-
-
             }
-        }
-        catch (SocketException e)
-        {
-            Console.WriteLine("SocketException: {0}", e);
-            server.Stop();
-        }
-    }
-    public void HTTPForwarding(Object obj)
-    {
-        string url = "http://localhost:9001";
-        string request = responseData;
-        string id = MTAdaptor.Hashing.SHA3_512(request); //Get Hash from incoming TCP Data
-        string buildedUrl = url + "/?" + "id=" + id;
-
-        HttpClient client = new HttpClient();
-
-            var values = new Dictionary<string, string>
+            catch(Exception e)
             {
-                { "body", request }
-            };
-
-            var content = new FormUrlEncodedContent(values);
-
-            client.PostAsync(buildedUrl, content);
-            Console.WriteLine($"{DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss")} /POST HTTP Forwarding => {url}");
-            Console.WriteLine($"Data Hash: {id}");
-
-        if (!recordMode)
-        {
-            GetProductAsync(buildedUrl, content);
-            Console.WriteLine($"{DateTime.Now.ToString($"MM/dd/yyyy HH:mm:ss")} => Incoming HTTP from: {buildedUrl}");
-
+                Console.WriteLine("! System error: cannot start HTTP Host !");
+            }
 
         }
-
-
-
-
-    }
-
-
-    static async Task<string> GetProductAsync(string urlEndPoint, FormUrlEncodedContent content)
-    {
-        HttpClient client = new HttpClient();
-
-        string response = null;
-        HttpResponseMessage getResponse = await client.PostAsync(urlEndPoint, content);
-        if (getResponse.IsSuccessStatusCode)
+        static void HTTPClientHandler(Object StateInfo)
         {
-            response = await getResponse.Content.ReadAsStringAsync();
-            if (response == "")
-                Console.WriteLine("! ERROR: HTTP 404 Bad request !");
-
+            new Client((TcpClient)StateInfo);
         }
-        else
-        {
-            Console.WriteLine($"{DateTime.Now.ToString($"MM/dd/yyyy HH:mm:ss")} => Incoming HTTP from: {urlEndPoint}");
-        }
-        return response;
     }
 
+   
 
-    static void HTTPHandler(Object StateInfo)
-    {
-        new Client((TcpClient)StateInfo);
-    }
-    
 }
 
 
 class Client
 {
-
-    private void SendResponseData(TcpClient Client, int Code, string data)
+       private void SendResponseData(TcpClient Client, int Code, string data)
     {
         string CodeStr = Code.ToString() + " " + ((HttpStatusCode)Code).ToString();
         string Html = data;
         string Str = "HTTP/1.1 " + CodeStr + "\nContent-type: text/html\nContent-Length:" + Html.Length.ToString() + "\n\n" + Html;
         byte[] Buffer = Encoding.ASCII.GetBytes(Str);
-      
+
         Client.GetStream().Write(Buffer, 0, Buffer.Length);
         Console.WriteLine($"{DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss")} HTTP Response Sent =>");
         Console.WriteLine($"===============================================\n");
@@ -185,7 +92,7 @@ class Client
     // Конструктор класса. Ему нужно передавать принятого клиента от TcpListener
     public Client(TcpClient Client)
     {
-     
+
         // Объявим строку, в которой будет хранится запрос клиента
         string Request = "";
         // Буфер для хранения принятых от клиента данных
@@ -244,7 +151,8 @@ class Client
         // Если в папке www не существует данного файла, посылаем ошибку 404
         if (!File.Exists(FilePath))
         {
-            SendResponseData(Client, 200, Server.responseData);
+            
+            SendResponseData(Client, 200, MTAdaptor.ServerHTTP.responseData);
             //SendError(Client, 404);
 
             return;

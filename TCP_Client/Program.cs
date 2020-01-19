@@ -21,10 +21,9 @@ namespace HeadRequest
                 using var client = new TcpClient();
 
                 var hostname = "127.0.0.1";
-                client.Connect(hostname, 8080);
+                client.Connect(hostname, 23000);
 
                 using NetworkStream networkStream = client.GetStream();
-                networkStream.ReadTimeout = 2000;
 
                 using var writer = new StreamWriter(networkStream);
 
