@@ -12,23 +12,43 @@ namespace MTAdaptor
         {
             string ipAddress = (IPAddress.Any).ToString();
             int incomingPort = 8080;
+            int hostPort = 8079; // for playback messages
             int outcomingPort = 8081;
-            
 
-            Console.WriteLine("MTAdaptor Started...");
-            Console.WriteLine("====================");
-           
-
-            Thread incomingTcp = new Thread(delegate ()
+            if (Server.recordMode)
             {
-                Server myserver = new Server(ipAddress, incomingPort);
-            });
+                Console.WriteLine("MTAdaptor Started in Record mode...");
+                Console.WriteLine("===================================\n");
 
-            incomingTcp.Start();
+                Thread incomingTcp = new Thread(delegate ()
+                {
+                    Server myserver = new Server(ipAddress, incomingPort);
+                });
 
+                incomingTcp.Start();
+                Console.WriteLine($"Incoming TCP running on {ipAddress}:{incomingPort}");
+            }
+            else
+            {
+                Console.WriteLine("MTAdaptor Started in Playback mode...");
+                Console.WriteLine("=====================================\n");
 
-            Console.WriteLine($"Incoming TCP running on {ipAddress}:{incomingPort}");
+                Thread incomingTcp = new Thread(delegate ()
+                {
+                    Server myserver = new Server(ipAddress, incomingPort);
+                });
 
+                incomingTcp.Start();
+
+                Thread hostTCP = new Thread(delegate ()
+                {
+                    Server myserver = new Server(ipAddress, hostPort);
+                });
+                hostTCP.Start();
+
+                Console.WriteLine($"Incoming TCP running on {ipAddress}:{incomingPort} | {hostPort}");
+
+            }
             Thread outcomingTcp = new Thread(delegate ()
             {
                 Server myserver = new Server(ipAddress, outcomingPort);
@@ -38,7 +58,7 @@ namespace MTAdaptor
 
             Console.WriteLine($"Outcoming TCP running on {ipAddress}:{outcomingPort}");
 
-            Console.WriteLine("Waiting for connections...");
+            Console.WriteLine("Waiting for job...");
 
         }
 

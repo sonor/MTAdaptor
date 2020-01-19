@@ -16,7 +16,8 @@ class Server
 {
     public static String responseData = String.Empty;
     TcpListener server = null;
-    bool recordMode = false;
+    public static bool recordMode = false;
+    public static byte[] TCPResponse = null;
 
 
 
@@ -52,17 +53,26 @@ class Server
                     Int32 bytes = stream.Read(data, 0, data.Length);
                     responseData = System.Text.Encoding.ASCII.GetString(data, 0, bytes);
 
-                    Thread t = new Thread(new ParameterizedThreadStart(TCPForwarding));
+
+                    Thread t = new Thread(new ParameterizedThreadStart(HTTPForwarding));
                     t.Start(client);
+
+
                    
+
+
+
+
+
                 }
                 else if (cidEndppoint.Port == 8081)
                 {
-                    Console.WriteLine($"{DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss")} => HTTP Incoming Request");
+                    Console.WriteLine($"{DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss")} => HTTP Request");
             
                     Thread Thread = new Thread(new ParameterizedThreadStart(HTTPHandler));
                     Thread.Start(client);
                 }
+                
 
 
             }
@@ -73,7 +83,7 @@ class Server
             server.Stop();
         }
     }
-    public void TCPForwarding(Object obj)
+    public void HTTPForwarding(Object obj)
     {
         string url = "http://localhost:9001";
         string request = responseData;
@@ -90,21 +100,23 @@ class Server
             var content = new FormUrlEncodedContent(values);
 
             client.PostAsync(buildedUrl, content);
-            Console.WriteLine($"{DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss")} TCP Forwarding => {url}");
+            Console.WriteLine($"{DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss")} /POST HTTP Forwarding => {url}");
             Console.WriteLine($"Data Hash: {id}");
 
         if (!recordMode)
         {
-         GetProductAsync(buildedUrl, content);
-         Console.WriteLine($"{DateTime.Now.ToString($"MM/dd/yyyy HH:mm:ss")} => Incoming HTTP from: {buildedUrl}");
+            GetProductAsync(buildedUrl, content);
+            Console.WriteLine($"{DateTime.Now.ToString($"MM/dd/yyyy HH:mm:ss")} => Incoming HTTP from: {buildedUrl}");
+
 
         }
 
 
-           
-        
-       
+
+
     }
+
+
     static async Task<string> GetProductAsync(string urlEndPoint, FormUrlEncodedContent content)
     {
         HttpClient client = new HttpClient();
@@ -117,6 +129,10 @@ class Server
             if (response == "")
                 Console.WriteLine("! ERROR: HTTP 404 Bad request !");
 
+        }
+        else
+        {
+            Console.WriteLine($"{DateTime.Now.ToString($"MM/dd/yyyy HH:mm:ss")} => Incoming HTTP from: {urlEndPoint}");
         }
         return response;
     }

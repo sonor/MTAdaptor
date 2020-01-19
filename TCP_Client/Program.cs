@@ -12,10 +12,10 @@ namespace HeadRequest
             Console.WriteLine("TCP Client Started...");
             Console.WriteLine("=====================");
             Console.WriteLine("Start to type messages...");
-            string requestMessage = Console.ReadLine();
+            string requestInput = Console.ReadLine();
 
 
-            while (requestMessage != "q")
+            while (requestInput != "q")
             {
 
                 using var client = new TcpClient();
@@ -30,11 +30,26 @@ namespace HeadRequest
 
                 using var reader = new StreamReader(networkStream, Encoding.UTF8);
 
-                byte[] bytes = Encoding.UTF8.GetBytes(requestMessage);
+                byte[] bytes = Encoding.UTF8.GetBytes(requestInput);
                 networkStream.Write(bytes, 0, bytes.Length);
-                networkStream.Close();
+                
                 Console.WriteLine("message sent");
-                requestMessage = Console.ReadLine();
+
+            
+                
+                try 
+                {
+                    
+                }
+                catch(Exception e)
+                {
+
+                }
+
+                requestInput = Console.ReadLine();
+
+               
+
             }
 
            
